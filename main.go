@@ -165,12 +165,12 @@ func extractJSFromDomain(domain string, downloadFiles bool, outputDir string, cr
 	results = append(results, "Results URL JS:")
 	for jsURL := range uniqueURLs {
 		results = append(results, fmt.Sprintf("- %s", jsURL))
-		
+
 		if downloadFiles && outputDir != "" {
 			filePath := downloadFile(jsURL, outputDir, retries)
 			if filePath != "" {
 				results = append(results, fmt.Sprintf("   - File downloaded: %s", filePath))
-				
+
 				if createLists {
 					wordlistPath := createWordlists(filePath)
 					if wordlistPath != "" {
@@ -193,7 +193,7 @@ func main() {
 		urlStr         = flag.String("u", "", "Single domain URL")
 		listFile       = flag.String("l", "", "File containing list of domains")
 		outputFile     = flag.String("o", "", "Output file for results")
-		download       = flag.Bool("dl", false, "Enable file download")
+		download       = flag.Bool("dl", true, "Enable file download")
 		retries        = flag.Int("r", 3, "Number of download retries")
 		outputDir      = flag.String("od", "", "Directory for downloaded files")
 		createWordlist = flag.Bool("w", false, "Create wordlists from files")
@@ -212,7 +212,7 @@ func main() {
 
 	// Process input domains
 	domains := []string{}
-	
+
 	// Read from stdin
 	stat, _ := os.Stdin.Stat()
 	if (stat.Mode() & os.ModeCharDevice) == 0 {
@@ -233,7 +233,7 @@ func main() {
 			log.Fatalf("Error opening list file: %v", err)
 		}
 		defer file.Close()
-		
+
 		scanner := bufio.NewScanner(file)
 		for scanner.Scan() {
 			domains = append(domains, scanner.Text())
@@ -257,7 +257,7 @@ func main() {
 			*createWordlist,
 			*retries,
 		)
-		
+
 		for _, line := range results {
 			fmt.Println(line)
 			outputBuffer.WriteString(line + "\n")
