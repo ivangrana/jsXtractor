@@ -1,17 +1,20 @@
-[# jsXtractor
+# jsXtractor
 
 Here's a professional and informative `README.md` for your Go tool:
 
 ---
 
-# 🛠️ jsXtractor – JavaScript File Extractor & Wordlist Generator
+# 🛠️ JSExtractor – JavaScript File Extractor & Wordlist Generator
 
-`jsXtractor` is a lightweight, command-line tool written in Go that extracts JavaScript files from websites, downloads them, and optionally generates wordlists from their content. It’s ideal for security researchers, penetration testers, and bug bounty hunters performing reconnaissance or client-side analysis.
+`JSExtractor` is a lightweight, command-line tool written in Go that extracts JavaScript files from websites, downloads them, and optionally generates wordlists from their content. It’s ideal for security researchers, penetration testers, and bug bounty hunters performing reconnaissance or client-side analysis.
 
 ---
 
 ## 📋 Features
 
+- ✅ **Recursive Crawling** discover JS files on all reachable pages
+- ✅ **Depth Control** configurable crawl depth
+- ✅ **Scope Filtering** domain whitelisting/blacklisting via regex
 - ✅ **Extract JS files** from `<script src="...">` tags
 - 🔗 Supports domains with or without `http://`/`https://`
 - 💾 **Download JS files** with retry logic
@@ -36,14 +39,7 @@ Here's a professional and informative `README.md` for your Go tool:
 
 ### Install
 ```bash
-go install github.com/yourusername/jsextractor@latest
-```
-
-Or clone and build:
-```bash
-git clone https://github.com/yourusername/jsextractor.git
-cd jsextractor
-go build -o jsextractor main.go
+go build -o jsxtractor main.go
 ```
 
 ---
@@ -51,7 +47,7 @@ go build -o jsextractor main.go
 ## ▶️ Usage
 
 ```bash
-./jsextractor [flags]
+./jsxtractor [flags]
 ```
 
 ### Flags
@@ -66,8 +62,10 @@ go build -o jsextractor main.go
 | `-w` | Create wordlists from downloaded JS files | `false` |
 | `-r <n>` | Number of download retries | `3` |
 | `-p <proxy>` | Proxy URL (e.g. `http://127.0.0.1:8080`) | `""` |
-
-> You can also pipe domains via stdin.
+| `-crawl` | Enable recursive crawling | `false` |
+| `-depth <n>` | Crawl depth | `3` |
+| `-scope <regex>` | Regex for in-scope domains | `""` |
+| `-respect-robots`| Respect robots.txt (placeholder) | `false` |
 
 ---
 
@@ -75,36 +73,37 @@ go build -o jsextractor main.go
 
 ### 1. Extract JS from a single domain
 ```bash
-./jsXtractor -u example.com
+./jsxtractor -u example.com
 ```
 
-### 2. Download JS files and save to directory
+### 2. Recursive crawl with depth 3
 ```bash
-./jsXtractor -u https://example.com -dl -od js_files/
+./jsxtractor -u https://example.com -crawl -depth 3
 ```
 
-### 3. Generate wordlists from JS content
+### 3. Crawl with scope regex
 ```bash
-./jsXtractor -u example.com -dl -od js_files -w
+./jsxtractor -u https://example.com -crawl -scope ".*\.example\.com/api/.*"
 ```
 
-### 4. Process list of domains from file
+### 4. Download JS files and save to directory
 ```bash
-./jsXtractor -l domains.txt -dl -od js_files -w -o results.txt
+./jsxtractor -u https://example.com -crawl -dl -od js_files/
 ```
 
-### 5. Use with proxy
+### 5. Generate wordlists from JS content
 ```bash
-./jsXtractor -u example.com -p http://127.0.0.1:8080
+./jsxtractor -u example.com -dl -od js_files -w
 ```
 
-### 6. Pipe domains via stdin
+### 6. Process list of domains from file
 ```bash
-echo "example.com" | ./jsXtractor
+./jsxtractor -l domains.txt -dl -od js_files -w -o results.txt
 ```
-or
+
+### 7. Use with proxy
 ```bash
-cat domains.txt | ./jsXtractor -dl -od js_files
+./jsxtractor -u example.com -p http://127.0.0.1:8080
 ```
 
 ---
@@ -117,11 +116,15 @@ cat domains.txt | ./jsXtractor -dl -od js_files
 
 Example output:
 ```
-Extracted domain: https://example.com
-Results URL JS:
-- https://example.com/static/app.js
+Starting crawl on: https://example.com (max depth: 3)
+
+Page: https://example.com (Depth: 0)
+- Found JS: https://example.com/static/app.js
    - File downloaded: js_files/app.js
-   - Wordlists created: js_files/app.js.wordlists
+
+Page: https://example.com/about (Depth: 1)
+- Found JS: https://example.com/static/about.js
+   - File downloaded: js_files/about.js
 ```
 
 ---
@@ -137,11 +140,12 @@ Results URL JS:
 
 ## 🛠️ Future Enhancements (Planned)
 
-- [ ] Add JSON output format
-- [ ] Detect secrets (API keys, tokens) in JS
-- [ ] Support concurrent domain processing
-- [ ] Filter out CDN/common libraries (e.g., jQuery)
-- [ ] Fingerprint JS frameworks/libraries
+- [ ] **JS Rendering**: Headless browser integration for SPA (G-02)
+- [ ] **Concurrency**: Worker pool with configurable parallelism (G-03)
+- [ ] **Secret Detection**: Regex + entropy-based secret extraction (G-05)
+- [ ] **Endpoint Extraction**: AST + regex endpoint harvesting (G-06)
+- [ ] **Output Formats**: JSON, JSONL, CSV, Markdown, Silent (G-08)
+- [ ] **Source Map Recovery**: `.js.map` detection + reconstruction (G-07)
 
 ---
 
@@ -162,4 +166,3 @@ MIT License. See [LICENSE](LICENSE) for details.
 
 Issues, feature requests, and PRs are welcome!
 Made with ❤️ for security research.
-](https://bluelephant.com.br)
