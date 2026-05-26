@@ -115,6 +115,134 @@ func createWordlists(filePath string) string {
 	return wordlistPath
 }
 
+type crawlItem struct {
+	url   string
+	depth int
+}
+
+func isInScope(targetURL *url.URL, baseHost string, scopeRegex *regexp.Regexp) bool {
+	if scopeRegex != nil {
+		return scopeRegex.MatchString(targetURL.String())
+	}
+	// Default: same host
+	return targetURL.Host == baseHost
+}
+
+func crawlDomain(startURL string, maxDepth int, scopeRegex *regexp.Regexp, downloadFiles bool, outputDir string, createLists bool, retries int) []string {
+	results := []string{}
+	results = append(results, fmt.Sprintf("Starting crawl on: %s (max depth: %d)", startURL, maxDepth))
+
+	u, err := url.Parse(startURL)
+	if err != nil {
+		results = append(results, fmt.Sprintf("Error parsing start URL: %v", err))
+		return results
+	}
+	baseHost := u.Host
+
+	visited := make(map[string]struct{})
+	discoveredJS := make(map[string]struct{})
+	queue := []crawlItem{{url: startURL, depth: 0}}
+
+	client := &http.Client{
+		Timeout: 10 * time.Second,
+	}
+
+	for len(queue) > 0 {
+		item := queue[0]
+		queue = queue[1:]
+
+		if _, exists := visited[item.url]; exists {
+			continue
+		}
+		visited[item.url] = struct{}{}
+
+		if item.depth > maxDepth {
+			continue
+		}
+
+		resp, err := client.Get(item.url)
+		if err != nil {
+			log.Printf("Error fetching %s: %v", item.url, err)
+			continue
+		}
+
+		if resp.StatusCode != http.StatusOK {
+			resp.Body.Close()
+			continue
+		}
+
+		currentPageURL, err := url.Parse(item.url)
+		if err != nil {
+			log.Printf("Error parsing current page URL %s: %v", item.url, err)
+			continue
+		}
+
+		doc, err := goquery.NewDocumentFromReader(resp.Body)
+		resp.Body.Close()
+		if err != nil {
+			log.Printf("Error parsing HTML from %s: %v", item.url, err)
+			continue
+		}
+
+		results = append(results, fmt.Sprintf("\nPage: %s (Depth: %d)", item.url, item.depth))
+
+		// Extract JS
+		doc.Find("script").Each(func(i int, s *goquery.Selection) {
+			if src, exists := s.Attr("src"); exists {
+				jsURL, err := url.Parse(src)
+				if err != nil {
+					return
+				}
+				jsURL = currentPageURL.ResolveReference(jsURL)
+				jsURLStr := jsURL.String()
+
+				if _, exists := discoveredJS[jsURLStr]; !exists {
+					discoveredJS[jsURLStr] = struct{}{}
+					results = append(results, fmt.Sprintf("- Found JS: %s", jsURLStr))
+
+					if downloadFiles && outputDir != "" {
+						filePath := downloadFile(jsURLStr, outputDir, retries)
+						if filePath != "" {
+							results = append(results, fmt.Sprintf("   - File downloaded: %s", filePath))
+							if createLists {
+								wordlistPath := createWordlists(filePath)
+								if wordlistPath != "" {
+									results = append(results, fmt.Sprintf("   - Wordlists created: %s", wordlistPath))
+								}
+							}
+						}
+					}
+				}
+			}
+		})
+
+		// Extract Links for next depth
+		if item.depth < maxDepth {
+			doc.Find("a").Each(func(i int, s *goquery.Selection) {
+				if href, exists := s.Attr("href"); exists {
+					linkURL, err := url.Parse(href)
+					if err != nil {
+						return
+					}
+					linkURL = currentPageURL.ResolveReference(linkURL)
+
+					// Remove fragments
+					linkURL.Fragment = ""
+
+					if isInScope(linkURL, baseHost, scopeRegex) {
+						linkStr := linkURL.String()
+						if _, exists := visited[linkStr]; !exists {
+							queue = append(queue, crawlItem{url: linkStr, depth: item.depth + 1})
+						}
+					}
+				}
+			})
+		}
+	}
+
+	return results
+}
+
 func extractJSFromDomain(domain string, downloadFiles bool, outputDir string, createLists bool, retries int) []string {
 	results := []string{}
 	results = append(results, fmt.Sprintf("Extracted domain: %s", domain))
@@ -198,6 +326,10 @@ func main() {
 		outputDir      = flag.String("od", "", "Directory for downloaded files")
 		createWordlist = flag.Bool("w", false, "Create wordlists from files")
 		proxy          = flag.String("p", "", "Proxy server URL")
+		crawl          = flag.Bool("crawl", false, "Enable recursive crawling")
+		depth          = flag.Int("depth", 3, "Crawl depth")
+		scope          = flag.String("scope", "", "Regex for in-scope domains")
+		respectRobots  = flag.Bool("respect-robots", false, "Respect robots.txt (not implemented yet)")
 	)
 	flag.Parse()
 
@@ -208,6 +340,15 @@ func main() {
 			log.Fatalf("Invalid proxy URL: %v", err)
 		}
 		http.DefaultTransport = &http.Transport{Proxy: http.ProxyURL(proxyURL)}
+	}
+
+	var scopeRegex *regexp.Regexp
+	if *scope != "" {
+		var err error
+		scopeRegex, err = regexp.Compile(*scope)
+		if err != nil {
+			log.Fatalf("Invalid scope regex: %v", err)
+		}
 	}
 
 	// Process input domains
@@ -250,13 +391,26 @@ func main() {
 	// Process all domains
 	var outputBuffer bytes.Buffer
 	for _, domain := range domains {
-		results := extractJSFromDomain(
-			domain,
-			*download,
-			*outputDir,
-			*createWordlist,
-			*retries,
-		)
+		var results []string
+		if *crawl {
+			results = crawlDomain(
+				domain,
+				*depth,
+				scopeRegex,
+				*download,
+				*outputDir,
+				*createWordlist,
+				*retries,
+			)
+		} else {
+			results = extractJSFromDomain(
+				domain,
+				*download,
+				*outputDir,
+				*createWordlist,
+				*retries,
+			)
+		}
 
 		for _, line := range results {
 			fmt.Println(line)
