@@ -1,12 +1,12 @@
-# jsXtractor
+[# jsXtractor
 
 Here's a professional and informative `README.md` for your Go tool:
 
 ---
 
-# 🛠️ JSExtractor – JavaScript File Extractor & Wordlist Generator
+# 🛠️ jsXtractor – JavaScript File Extractor & Wordlist Generator
 
-`JSExtractor` is a lightweight, command-line tool written in Go that extracts JavaScript files from websites, downloads them, and optionally generates wordlists from their content. It’s ideal for security researchers, penetration testers, and bug bounty hunters performing reconnaissance or client-side analysis.
+`jsXtractor` is a lightweight, command-line tool written in Go that extracts JavaScript files from websites, downloads them, and optionally generates wordlists from their content. It’s ideal for security researchers, penetration testers, and bug bounty hunters performing reconnaissance or client-side analysis.
 
 ---
 
@@ -75,36 +75,36 @@ go build -o jsextractor main.go
 
 ### 1. Extract JS from a single domain
 ```bash
-./jsextractor -u example.com
+./jsXtractor -u example.com
 ```
 
 ### 2. Download JS files and save to directory
 ```bash
-./jsextractor -u https://example.com -dl -od js_files/
+./jsXtractor -u https://example.com -dl -od js_files/
 ```
 
 ### 3. Generate wordlists from JS content
 ```bash
-./jsextractor -u example.com -dl -od js_files -w
+./jsXtractor -u example.com -dl -od js_files -w
 ```
 
 ### 4. Process list of domains from file
 ```bash
-./jsextractor -l domains.txt -dl -od js_files -w -o results.txt
+./jsXtractor -l domains.txt -dl -od js_files -w -o results.txt
 ```
 
 ### 5. Use with proxy
 ```bash
-./jsextractor -u example.com -p http://127.0.0.1:8080
+./jsXtractor -u example.com -p http://127.0.0.1:8080
 ```
 
 ### 6. Pipe domains via stdin
 ```bash
-echo "example.com" | ./jsextractor
+echo "example.com" | ./jsXtractor
 ```
 or
 ```bash
-cat domains.txt | ./jsextractor -dl -od js_files
+cat domains.txt | ./jsXtractor -dl -od js_files
 ```
 
 ---
@@ -162,3 +162,4 @@ MIT License. See [LICENSE](LICENSE) for details.
 
 Issues, feature requests, and PRs are welcome!
 Made with ❤️ for security research.
+](https://bluelephant.com.br)
